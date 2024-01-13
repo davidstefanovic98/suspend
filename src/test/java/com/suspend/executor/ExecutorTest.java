@@ -22,10 +22,9 @@ class ExecutorTest {
     void testExecute() {
         Executor executor = new Executor();
         TableMapper mapper = new TableMapper();
-        TableMetadata metadata = mapper.getMetadata(ExecutorTest.TestModel.class);
+        TableMetadata metadata = mapper.getMetadata(TestModel.class);
         QueryBuilder builder = new DefaultQueryBuilder(metadata);
-        builder.select();
-        List<Map<String, Object>> list = executor.execute(builder.build());
+        List<Map<String, Object>> list = executor.execute(builder.select().build());
         assertEquals("David", list.get(0).get("name"));
     }
 

@@ -16,11 +16,11 @@ class ModelMapperTest {
         TableMapper mapper = new TableMapper();
 
         TableMetadata metadata = mapper.getMetadata(TestModel.class);
-        assertEquals("TestModel", metadata.tableName());
-        assertEquals(2, metadata.columns().size());
-        assertEquals("name", metadata.columns().get(0).name());
-        assertEquals(String.class, metadata.columns().get(0).type());
-        assertEquals("age", metadata.columns().get(1).name());
-        assertEquals(int.class, metadata.columns().get(1).type());
+        assertEquals("TestModel", metadata.getTableName());
+        assertEquals(2, metadata.getColumns().size());
+        assertEquals("name", metadata.getColumns().get(0).getName());
+        assertEquals(String.class, metadata.getColumns().get(0).getType());
+        assertEquals("age", metadata.getColumns().get(1).getName());
+        assertEquals(int.class, metadata.getColumns().get(1).getType());
     }
 }

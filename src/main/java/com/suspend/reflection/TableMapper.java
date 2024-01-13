@@ -12,7 +12,7 @@ public class TableMapper {
 
     private List<ColumnMetadata> getColumns(Class<?> clazz) {
         return Arrays.stream(clazz.getDeclaredFields())
-            .map(field -> new ColumnMetadata(field.getType(), field.getName()))
+            .map(field -> new ColumnMetadata(field.getType(), field.getName(), null))
             .collect(Collectors.toList());
     }
 }

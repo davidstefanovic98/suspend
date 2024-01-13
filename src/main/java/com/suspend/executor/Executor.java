@@ -15,6 +15,7 @@ public class Executor {
 
     private final Logger logger = LoggerFactory.getLogger(Executor.class);
 
+    // TODO: Map<String, Object> should be a custom structure
     public List<Map<String, Object>> execute(String query) {
         List<Map<String, Object>> result = new ArrayList<>();
 

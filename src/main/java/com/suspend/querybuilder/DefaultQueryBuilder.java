@@ -22,9 +22,9 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append("SELECT ");
         builder.append(String.join(
                         ", ",
-                        modelMetadata.columns().stream().map(ColumnMetadata::name).toList()));
+                        modelMetadata.getColumns().stream().map(ColumnMetadata::getName).toList()));
         builder.append(" FROM ");
-        builder.append(modelMetadata.tableName());
+        builder.append(modelMetadata.getTableName());
 
         return this;
     }
@@ -32,16 +32,16 @@ public class DefaultQueryBuilder implements QueryBuilder {
     @Override
     public QueryBuilder insert() {
         builder.append("INSERT INTO ");
-        builder.append(modelMetadata.tableName());
+        builder.append(modelMetadata.getTableName());
         builder.append(" (");
         builder.append(String.join(
                         ", ",
-                        modelMetadata.columns().stream().map(ColumnMetadata::name).toList()));
+                        modelMetadata.getColumns().stream().map(ColumnMetadata::getName).toList()));
         builder.append(") ");
         builder.append(" VALUES (");
         builder.append(String.join(
                         ", ",
-                        modelMetadata.columns().stream().map(column -> "?").toList()));
+                        modelMetadata.getColumns().stream().map(column -> "?").toList()));
         builder.append(")");
 
         return this;
@@ -50,11 +50,11 @@ public class DefaultQueryBuilder implements QueryBuilder {
     @Override
     public QueryBuilder update() {
         builder.append("UPDATE ");
-        builder.append(modelMetadata.tableName());
+        builder.append(modelMetadata.getTableName());
         builder.append(" SET ");
         builder.append(String.join(
                         ", ",
-                        modelMetadata.columns().stream().map(column -> column.name() + " = ?").toList()));
+                        modelMetadata.getColumns().stream().map(column -> column.getName() + " = ?").toList()));
         return this;
     }
 }
