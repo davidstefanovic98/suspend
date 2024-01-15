@@ -1,4 +1,4 @@
-package com.suspend.connection.exception;
+package com.suspend.exception;
 
 public class ParsingUrlException extends RuntimeException {
 

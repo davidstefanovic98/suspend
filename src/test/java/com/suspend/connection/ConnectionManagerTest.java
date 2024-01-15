@@ -11,7 +11,7 @@ class ConnectionManagerTest {
 
     @Test
     void testConnection() throws SQLException {
-        Connection connection = ConnectionManager.connect();
+        Connection connection = new ConnectionManager().connect();
         assertTrue(connection.isValid(100));
     }
 }

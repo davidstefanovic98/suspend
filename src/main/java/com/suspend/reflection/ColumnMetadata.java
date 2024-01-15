@@ -5,14 +5,16 @@ import java.util.Objects;
 //@Todo: Implement this class
 public final class ColumnMetadata {
 
-    private Class<?> type;
-    private String name;
-    private Object value;
+    private final Class<?> type;
+    private final String name;
+    private final Object value;
+    private final String columnName;
 
-    public ColumnMetadata(Class<?> type, String name, Object value) {
+    public ColumnMetadata(Class<?> type, String name, Object value, String columnName) {
         this.type = type;
         this.name = name;
         this.value = value;
+        this.columnName = columnName;
     }
 
     public Class<?> getType() {
@@ -27,16 +29,8 @@ public final class ColumnMetadata {
         return value;
     }
 
-    public void setType(Class<?> type) {
-        this.type = type;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setValue(Object value) {
-        this.value = value;
+    public String getColumnName() {
+        return columnName;
     }
 
     @Override
@@ -59,7 +53,7 @@ public final class ColumnMetadata {
         return "ColumnMetadata[" +
                 "type=" + type + ", " +
                 "name=" + name + ", " +
-                "value=" + value + ']';
+                "value=" + value + ", " +
+                "columnName=" + columnName + ']';
     }
-
 }

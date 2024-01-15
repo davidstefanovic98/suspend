@@ -1,14 +1,13 @@
 package com.suspend.querybuilder;
 
-import com.suspend.reflection.ColumnMetadata;
+import com.suspend.exception.InvalidMappingException;
 import com.suspend.reflection.TableMapper;
 import com.suspend.reflection.TableMetadata;
 import com.suspend.util.ReflectionUtil;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class Mapper<T> {
 
@@ -23,31 +22,19 @@ public class Mapper<T> {
     }
 
     public List<T> map() {
-        List<T> result = new ArrayList<>();
-
-        data.forEach(row -> {
-            T instance = ReflectionUtil.newInstance(clazz);
-            tableMetadata.getColumns().forEach(column -> {
-                Object value = row.get(column.getName());
-                try {
-                    Field field = clazz.getDeclaredField(column.getName());
-                    field.setAccessible(true);
-                    field.set(instance, value);
-                } catch (NoSuchFieldException | IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            result.add(instance);
-        });
-        return result;
-    }
-
-
-    private void assignValue(TableMetadata tableMetadata, String columnName, Object value) {
-        ColumnMetadata field = tableMetadata.getColumns().stream()
-            .filter(column -> column.getName().equals(columnName))
-            .findFirst()
-            .orElseThrow(() -> new RuntimeException("Column not found"));
-        field.setValue(value);
+        return data.stream()
+                .map(row -> {
+                    T instance = ReflectionUtil.newInstance(clazz);
+                    Stream.concat(tableMetadata.getColumns().stream(), tableMetadata.getIdColumns().stream())
+                            .forEach(column -> {
+                                Object value = row.get(column.getColumnName());
+                                if (!row.containsKey(column.getColumnName())) {
+                                    throw new InvalidMappingException(String.format("The column '%s' is not present in the result set.", column.getColumnName()));
+                                }
+                                ReflectionUtil.setField(instance, clazz, column.getName(), value);
+                            });
+                    return instance;
+                })
+                .toList();
     }
 }

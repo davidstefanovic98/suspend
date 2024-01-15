@@ -1,9 +1,8 @@
 package com.suspend.connection;
 
-import com.suspend.connection.exception.ParsingUrlException;
+import com.suspend.configuration.Configuration;
+import com.suspend.exception.ParsingUrlException;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -12,8 +11,13 @@ import java.util.Properties;
 public class ConnectionManager {
 
     private static Connection instance = null;
+    private final Configuration configuration;
 
-    public static Connection connect() {
+    public ConnectionManager() {
+        this.configuration = Configuration.getInstance();
+    }
+
+    public Connection connect() {
         Properties properties = getProperties();
 
         String user = properties.getProperty("suspend.db.user");
@@ -32,7 +36,7 @@ public class ConnectionManager {
         }
     }
 
-    public static synchronized Connection getInstance() {
+    public synchronized Connection getInstance() {
         if (instance == null) {
             instance = connect();
         } else {
@@ -47,7 +51,7 @@ public class ConnectionManager {
         return instance;
     }
 
-    public static String getConnectionUrl() {
+    public String getConnectionUrl() {
         Properties properties = getProperties();
 
         String protocol = properties.getProperty("suspend.db.protocol");
@@ -64,7 +68,7 @@ public class ConnectionManager {
         return url;
     }
 
-    public static void initializeDriver() {
+    public void initializeDriver() {
         Properties properties = getProperties();
 
         String driver = properties.getProperty("suspend.db.driver");
@@ -76,14 +80,7 @@ public class ConnectionManager {
         }
     }
 
-    public static Properties getProperties() {
-          Properties properties = new Properties();
-
-          try(InputStream inputStream = ConnectionManager.class.getResourceAsStream("/application.properties")) {
-              properties.load(inputStream);
-          } catch (IOException e) {
-              e.printStackTrace();
-          }
-          return properties;
+    public Properties getProperties() {
+        return configuration.getProperties();
     }
 }

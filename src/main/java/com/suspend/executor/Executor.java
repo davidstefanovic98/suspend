@@ -1,7 +1,6 @@
 package com.suspend.executor;
 
 import com.suspend.connection.ConnectionManager;
-import org.mariadb.jdbc.export.Prepare;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,13 +12,10 @@ import java.util.Map;
 
 public class Executor {
 
-    private final Logger logger = LoggerFactory.getLogger(Executor.class);
-
-    // TODO: Map<String, Object> should be a custom structure
     public List<Map<String, Object>> execute(String query) {
         List<Map<String, Object>> result = new ArrayList<>();
 
-        try (Connection connection = ConnectionManager.getInstance(); Statement statement = connection.createStatement()) {
+        try (Connection connection = new ConnectionManager().getInstance(); Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery(query);
             ResultSetMetaData metaData = resultSet.getMetaData();
 
@@ -36,12 +32,13 @@ public class Executor {
         return result;
     }
 
-    public Long executeUpdate(String query) {
-        try (Connection connection = ConnectionManager.getInstance(); PreparedStatement statement = connection.prepareStatement(query)) {
+    public Object executeUpdate(String query) {
+        try (Connection connection = new ConnectionManager().getInstance(); PreparedStatement statement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            statement.executeUpdate();
 
             ResultSet resultSet = statement.getGeneratedKeys();
             if (resultSet.next()) {
-                return resultSet.getLong(1);
+                return resultSet.getObject(1);
             } else {
                 return null;
             }
