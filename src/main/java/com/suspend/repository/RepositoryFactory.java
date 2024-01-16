@@ -19,13 +19,15 @@ public class RepositoryFactory {
 
     private void createRepository(Configuration configuration) {
         configuration.getRepositoryMap().forEach((k, v) -> {
-            RepositoryImpl<?, ?> repository = new RepositoryImpl<>(k);
-            Object repository1 = Proxy.newProxyInstance(
-                    RepositoryFactory.class.getClassLoader(),
-                    new Class[]{v},
-                    new RepositoryInvocationHandler(repository)
-            );
-            map.put(k, (Repository<?, ?>) repository1);
+            if (v != null) {
+                RepositoryImpl<?, ?> repository = new RepositoryImpl<>(k, configuration.getEntityContainer());
+                Object repository1 = Proxy.newProxyInstance(
+                        RepositoryFactory.class.getClassLoader(),
+                        new Class[]{v},
+                        new RepositoryInvocationHandler(repository)
+                );
+                map.put(k, (Repository<?, ?>) repository1);
+            }
         });
     }
 

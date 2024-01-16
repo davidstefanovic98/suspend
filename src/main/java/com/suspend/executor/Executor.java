@@ -22,7 +22,7 @@ public class Executor {
             while (resultSet.next()) {
                Map<String, Object> map = new HashMap<>();
                for (int i = 1; i <= metaData.getColumnCount(); i++) {
-                   map.put(metaData.getColumnName(i), resultSet.getObject(i));
+                   map.put(getColumnName(metaData, i), resultSet.getObject(i));
                }
                 result.add(map);
             }
@@ -45,5 +45,9 @@ public class Executor {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String getColumnName(ResultSetMetaData metaData, int i) throws SQLException {
+        return String.format("%s.%s", metaData.getTableName(i), metaData.getColumnName(i));
     }
 }

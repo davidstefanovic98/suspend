@@ -1,8 +1,6 @@
 package com.suspend.configuration.entity;
 
-import com.suspend.annotation.Column;
-import com.suspend.annotation.Id;
-import com.suspend.annotation.Table;
+import com.suspend.annotation.*;
 
 @Table(name = "test_model")
 public class TestModel {
@@ -13,5 +11,12 @@ public class TestModel {
     private String name;
     @Column
     private int age;
+
+    @ManyToOne
+    @JoinColumn(name = "test_model_2_id")
+    private TestModel2 testModel2;
+
+    public TestModel() {
+    }
 }
 

@@ -1,5 +1,7 @@
 package com.suspend.reflection;
 
+import java.lang.annotation.Annotation;
+import java.util.List;
 import java.util.Objects;
 
 //@Todo: Implement this class
@@ -9,12 +11,14 @@ public final class ColumnMetadata {
     private final String name;
     private final Object value;
     private final String columnName;
+    private List<? extends Annotation> annotations;
 
-    public ColumnMetadata(Class<?> type, String name, Object value, String columnName) {
+    public ColumnMetadata(Class<?> type, String name, Object value, String columnName, List<? extends Annotation> annotations) {
         this.type = type;
         this.name = name;
         this.value = value;
         this.columnName = columnName;
+        this.annotations = annotations;
     }
 
     public Class<?> getType() {
@@ -31,6 +35,10 @@ public final class ColumnMetadata {
 
     public String getColumnName() {
         return columnName;
+    }
+
+    public List<? extends Annotation> getAnnotations() {
+        return annotations;
     }
 
     @Override

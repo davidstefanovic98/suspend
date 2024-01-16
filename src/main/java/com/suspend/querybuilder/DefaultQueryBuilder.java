@@ -3,17 +3,20 @@ package com.suspend.querybuilder;
 import com.suspend.exception.IncorrectTypeException;
 import com.suspend.reflection.ColumnMetadata;
 import com.suspend.reflection.TableMetadata;
+import com.suspend.util.QueryBuilderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DefaultQueryBuilder implements QueryBuilder {
 
     private final Logger logger = LoggerFactory.getLogger(DefaultQueryBuilder.class);
     private final StringBuilder builder = new StringBuilder();
     private final TableMetadata modelMetadata;
+    private List<Join<?, ?>> joins = new ArrayList<>();
 
     public DefaultQueryBuilder(TableMetadata modelMetadata) {
         this.modelMetadata = modelMetadata;
@@ -25,19 +28,29 @@ public class DefaultQueryBuilder implements QueryBuilder {
     }
 
     @Override
-    public QueryBuilder select(String... columns) {
+    public QueryBuilder select() {
         builder.append("SELECT ");
 
-        if (columns.length == 0) {
-            builder.append("*");
+        joins = QueryBuilderUtil.getJoins(modelMetadata);
+        Set<String> uniqueColumns;
+        if (!joins.isEmpty()) {
+            uniqueColumns = Stream.concat(modelMetadata.getIdColumns().stream(), modelMetadata.getColumns().stream())
+                    .map(column -> String.format("%s.%s", modelMetadata.getTableName(), column.getColumnName()))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
         } else {
-            builder.append(String.join(
-                    ", ",
-                    columns));
+            uniqueColumns = Stream.concat(modelMetadata.getIdColumns().stream(), modelMetadata.getColumns().stream())
+                    .map(ColumnMetadata::getColumnName)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
         }
-        builder.append(" FROM ");
 
-        builder.append(modelMetadata.getTableName());
+        builder.append(String.join(", ", uniqueColumns));
+
+        if (!joins.isEmpty()) {
+         return this;
+        } else {
+            builder.append(" FROM ");
+            builder.append(modelMetadata.getTableName());
+        }
 
         return this;
     }
@@ -48,13 +61,13 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append(modelMetadata.getTableName());
         builder.append(" (");
         builder.append(String.join(
-                        ", ",
-                        modelMetadata
-                                .getColumns()
-                                .stream()
-                                .filter(column -> !modelMetadata.getIdColumns().contains(column))
-                                .map(ColumnMetadata::getName)
-                                .toList()));
+                ", ",
+                modelMetadata
+                        .getColumns()
+                        .stream()
+                        .filter(column -> !modelMetadata.getIdColumns().contains(column))
+                        .map(ColumnMetadata::getName)
+                        .toList()));
         builder.append(") ");
         builder.append(" VALUES (");
 
@@ -66,8 +79,8 @@ public class DefaultQueryBuilder implements QueryBuilder {
                 .collect(Collectors.joining(", "));
 
         builder.append(String.join(
-                        ", ",
-                       values));
+                ", ",
+                values));
         builder.append(")");
 
         return this;
@@ -82,12 +95,12 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append(" SET ");
 
         builder.append(String.join(
-                        ", ",
-                        modelMetadata
-                                .getColumns()
-                                .stream()
-                                .map(column -> column.getColumnName() + " = " + getFormattedFieldValue(column, column.getValue()))
-                                .toList()));
+                ", ",
+                modelMetadata
+                        .getColumns()
+                        .stream()
+                        .map(column -> column.getColumnName() + " = " + getFormattedFieldValue(column, column.getValue()))
+                        .toList()));
 
         builder.append(" WHERE ");
         builder.append(id.getColumnName());
@@ -131,6 +144,30 @@ public class DefaultQueryBuilder implements QueryBuilder {
     @Override
     public QueryBuilder where(Map<String, Object> params) {
         return null;
+    }
+
+    @Override
+    public QueryBuilder join() {
+        joins = new ArrayList<>();
+        joins = QueryBuilderUtil.getJoins(modelMetadata);
+        if (!joins.isEmpty()) {
+            builder.append(",");
+            builder.append(" ");
+            builder.append(joins
+                    .stream()
+                    .flatMap(j -> j.getFields().stream())
+                    .collect(Collectors.joining(", ")));
+        }
+        builder.append(" from ");
+        builder.append(modelMetadata.getTableName());
+        builder.append(" ");
+        if (!joins.isEmpty()) {
+           builder.append(joins
+                   .stream()
+                   .map(Join::getSQL)
+                   .collect(Collectors.joining(" ")));
+        }
+        return this;
     }
 
     // Jesus Christ...

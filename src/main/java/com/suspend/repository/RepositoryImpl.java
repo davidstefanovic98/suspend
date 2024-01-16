@@ -3,9 +3,10 @@ package com.suspend.repository;
 import com.suspend.annotation.Exclude;
 import com.suspend.annotation.Id;
 import com.suspend.converter.AttributeConverter;
+import com.suspend.entitymanager.EntityContainer;
 import com.suspend.executor.Executor;
 import com.suspend.querybuilder.DefaultQueryBuilder;
-import com.suspend.querybuilder.Mapper;
+import com.suspend.mapper.Mapper;
 import com.suspend.reflection.TableMapper;
 import com.suspend.exception.NotUniqueResultException;
 import com.suspend.util.ReflectionUtil;
@@ -20,21 +21,23 @@ class RepositoryImpl<T, ID> implements Repository<T, ID> {
 
     private final Executor executor;
     private final Class<T> clazz;
+    private final EntityContainer entityContainer;
 
-    public RepositoryImpl(Class<T> clazz) {
+    public RepositoryImpl(Class<T> clazz, EntityContainer entityContainer) {
         this.executor = new Executor();
         this.clazz = clazz;
+        this.entityContainer = entityContainer;
     }
 
     @Override
     public List<T> findAll() {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(clazz));
-        return executeQueryAndMap(clazz, queryBuilder.select().build());
+        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(entityContainer.resolve(clazz).getTableMetadata());
+        return executeQueryAndMap(clazz, queryBuilder.select().join().build());
     }
 
     @Override
     public T save(T model) {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(model));
+        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(entityContainer.resolve(clazz).getTableMetadata());
         Object id = executor.executeUpdate(queryBuilder.insert().build());
         Arrays.stream(model.getClass().getDeclaredFields())
                 .filter(field -> field.isAnnotationPresent(Id.class))

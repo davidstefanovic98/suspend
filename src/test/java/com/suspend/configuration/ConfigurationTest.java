@@ -13,15 +13,10 @@ class ConfigurationTest {
     void testConfiguration() {
         Configuration configuration = Configuration.getInstance();
         configuration.setRepositoryPackageName("com.suspend.configuration.repository");
-
         configuration.addAnnotatedClass(Table.class);
-//        EntityManager entityManager = configuration.buildEntityManager();
+
         assertEquals(1, configuration.getRepositoryMap().size());
         assertTrue(configuration.getRepositoryMap().containsValue(TestRepository.class));
         assertTrue(configuration.getRepositoryMap().containsKey(TestModel.class));
-//        assertEquals(1, entityManager.getRepositoryMap().size());
-//        assertTrue(entityManager.getRepositoryMap().containsValue(TestRepository.class));
-//        assertTrue(entityManager.getRepositoryMap().containsKey(TestModel.class));
     }
-
 }

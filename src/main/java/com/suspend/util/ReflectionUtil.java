@@ -6,6 +6,7 @@ import com.suspend.exception.IncorrectTypeException;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -45,7 +46,8 @@ public class ReflectionUtil {
                             "The value of '%s' is not of the correct type. Expected: '%s', got '%s'",
                             fieldName,
                             field.getType().getName(),
-                            value.getClass().getName()));
+                            value.getClass().getName()),
+                    e);
         }
     }
 
@@ -77,6 +79,11 @@ public class ReflectionUtil {
         return reflections.getSubTypesOf(clazz);
     }
 
+    public static Set<Class<?>> getClassesAnnotatedBy(String packageName, Class<? extends Annotation> annotationClass) {
+        Reflections reflections = new Reflections(packageName, Scanners.TypesAnnotated);
+        return reflections.getTypesAnnotatedWith(annotationClass);
+    }
+
     public static <T> Class<T> getGenericTypeFromInterface(Class<T> clazz) {
         Type[] genericInterfaces = clazz.getGenericInterfaces();
         for (Type genericInterface : genericInterfaces) {
@@ -92,10 +99,19 @@ public class ReflectionUtil {
 
     public static <T> Class<T> getGenericTypeFromSuperclass(Class<T> clazz) {
         Type genericInterface = clazz.getGenericSuperclass();
-            if (genericInterface instanceof ParameterizedType) {
-                Type genericType = ((ParameterizedType) genericInterface).getActualTypeArguments()[0];
-                return (Class<T>) genericType;
-            }
-            return clazz;
+        if (genericInterface instanceof ParameterizedType) {
+            Type genericType = ((ParameterizedType) genericInterface).getActualTypeArguments()[0];
+            return (Class<T>) genericType;
         }
+        return clazz;
     }
+
+    public static Class<?> getGenericTypeFromField(Field field) {
+        Type genericType = field.getGenericType();
+        if (genericType instanceof ParameterizedType) {
+            Type type = ((ParameterizedType) genericType).getActualTypeArguments()[0];
+            return (Class<?>) type;
+        }
+        return (Class<?>) genericType;
+    }
+}

@@ -1,10 +1,13 @@
 package com.suspend.querybuilder;
 
+import com.suspend.annotation.ManyToOne;
+
+import javax.management.Query;
 import java.util.Map;
 
 public interface QueryBuilder {
 
-    QueryBuilder select(String... columns);
+    QueryBuilder select();
 
     QueryBuilder insert();
 
@@ -17,6 +20,8 @@ public interface QueryBuilder {
     QueryBuilder where(String... whereParams);
 
     QueryBuilder where(Map<String, Object> params);
+
+    QueryBuilder join();
 
     String build();
 }
