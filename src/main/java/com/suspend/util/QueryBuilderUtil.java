@@ -51,54 +51,52 @@ public class QueryBuilderUtil {
                     metadata.getTableName(),
                     new ArrayList<>(uniqueColumns));
             result.add(join);
-            result.addAll(getJoins(metadata, visited));
         });
 
-//        tableMetadata.getOneToManyColumns().forEach(oneToManyColumn -> {
-//            Class<?> type = oneToManyColumn.getType();
-//            TableMetadata metadata = new TableMapper().getMetadata(type);
-//            if (visited.contains(metadata)) {
-//                return;
-//            }
-//            visited.add(metadata);
-//            OneToMany oneToMany = oneToManyColumn.getAnnotations().stream()
-//                    .filter(annotation -> annotation instanceof OneToMany)
-//                    .map(annotation -> (OneToMany) annotation)
-//                    .findFirst()
-//                    .orElse(null);
-//
-//            if (oneToMany != null) {
-//                String mappedBy = oneToMany.mappedBy();
-//                // Find the corresponding @ManyToOne column
-//                Optional<ColumnMetadata> matchingManyToOneColumn = metadata.getManyToOneColumns().stream()
-//                        .filter(manyToOneColumn -> mappedBy.equals(manyToOneColumn.getName()))
-//                        .findFirst();
-//
-//                matchingManyToOneColumn.ifPresent(column -> {
-//                    JoinColumn joinColumn = column.getAnnotations().stream()
-//                            .filter(annotation -> annotation instanceof JoinColumn)
-//                            .map(annotation -> (JoinColumn) annotation)
-//                            .findFirst()
-//                            .orElse(null);
-//
-//                    if (joinColumn == null) {
-//                        throw new AnnotationMissingException(String.format("The @JoinColumn annotation is missing from the field '%s' in the class '%s'.", column.getName(), tableMetadata.getClazz().getName()));
-//                    }
-//                    Set<String> uniqueColumns = Stream.concat(metadata.getIdColumns().stream(), metadata.getColumns().stream())
-//                            .map(ColumnMetadata::getColumnName)
-//                            .collect(Collectors.toCollection(LinkedHashSet::new));
-//
-//                    Join<?, ?> inverseJoin = Join.create(
-//                            tableMetadata.getTableName(),
-//                            joinColumn.referencedColumnName(),
-//                            joinColumn.name(),
-//                            metadata.getTableName(),
-//                            new ArrayList<>(uniqueColumns));
-//                    result.add(inverseJoin);
-//                    result.addAll(getJoins(metadata, visited));
-//                });
-//            }
-//        });
+        tableMetadata.getOneToManyColumns().forEach(oneToManyColumn -> {
+            Class<?> type = oneToManyColumn.getType();
+            TableMetadata metadata = new TableMapper().getMetadata(type);
+            if (visited.contains(metadata)) {
+                return;
+            }
+            visited.add(metadata);
+            OneToMany oneToMany = oneToManyColumn.getAnnotations().stream()
+                    .filter(annotation -> annotation instanceof OneToMany)
+                    .map(annotation -> (OneToMany) annotation)
+                    .findFirst()
+                    .orElse(null);
+
+            if (oneToMany != null) {
+                String mappedBy = oneToMany.mappedBy();
+                // Find the corresponding @ManyToOne column
+                Optional<ColumnMetadata> matchingManyToOneColumn = metadata.getManyToOneColumns().stream()
+                        .filter(manyToOneColumn -> mappedBy.equals(manyToOneColumn.getName()))
+                        .findFirst();
+
+                matchingManyToOneColumn.ifPresent(column -> {
+                    JoinColumn joinColumn = column.getAnnotations().stream()
+                            .filter(annotation -> annotation instanceof JoinColumn)
+                            .map(annotation -> (JoinColumn) annotation)
+                            .findFirst()
+                            .orElse(null);
+
+                    if (joinColumn == null) {
+                        throw new AnnotationMissingException(String.format("The @JoinColumn annotation is missing from the field '%s' in the class '%s'.", column.getName(), tableMetadata.getClazz().getName()));
+                    }
+                    Set<String> uniqueColumns = Stream.concat(metadata.getIdColumns().stream(), metadata.getColumns().stream())
+                            .map(ColumnMetadata::getColumnName)
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+
+                    Join<?, ?> inverseJoin = Join.create(
+                            tableMetadata.getTableName(),
+                            joinColumn.referencedColumnName(),
+                            joinColumn.name(),
+                            metadata.getTableName(),
+                            new ArrayList<>(uniqueColumns));
+                    result.add(inverseJoin);
+                });
+            }
+        });
         return result;
     }
 

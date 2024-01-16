@@ -29,9 +29,9 @@ public class DefaultQueryBuilder implements QueryBuilder {
 
     @Override
     public QueryBuilder select() {
+        joins = QueryBuilderUtil.getJoins(modelMetadata);
         builder.append("SELECT ");
 
-        joins = QueryBuilderUtil.getJoins(modelMetadata);
         Set<String> uniqueColumns;
         if (!joins.isEmpty()) {
             uniqueColumns = Stream.concat(modelMetadata.getIdColumns().stream(), modelMetadata.getColumns().stream())
@@ -148,8 +148,6 @@ public class DefaultQueryBuilder implements QueryBuilder {
 
     @Override
     public QueryBuilder join() {
-        joins = new ArrayList<>();
-        joins = QueryBuilderUtil.getJoins(modelMetadata);
         if (!joins.isEmpty()) {
             builder.append(",");
             builder.append(" ");
@@ -157,15 +155,13 @@ public class DefaultQueryBuilder implements QueryBuilder {
                     .stream()
                     .flatMap(j -> j.getFields().stream())
                     .collect(Collectors.joining(", ")));
-        }
-        builder.append(" from ");
-        builder.append(modelMetadata.getTableName());
-        builder.append(" ");
-        if (!joins.isEmpty()) {
-           builder.append(joins
-                   .stream()
-                   .map(Join::getSQL)
-                   .collect(Collectors.joining(" ")));
+            builder.append(" from ");
+            builder.append(modelMetadata.getTableName());
+            builder.append(" ");
+            builder.append(joins
+                    .stream()
+                    .map(Join::getSQL)
+                    .collect(Collectors.joining(" ")));
         }
         return this;
     }
