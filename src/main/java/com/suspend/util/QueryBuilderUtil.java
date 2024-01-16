@@ -49,7 +49,8 @@ public class QueryBuilderUtil {
                             ? joinColumn.referencedColumnName()
                             : metadata.getIdColumns().get(0).getColumnName(),
                     metadata.getTableName(),
-                    new ArrayList<>(uniqueColumns));
+                    new ArrayList<>(uniqueColumns),
+                    "LEFT");
             result.add(join);
         });
 
@@ -92,7 +93,8 @@ public class QueryBuilderUtil {
                             joinColumn.referencedColumnName(),
                             joinColumn.name(),
                             metadata.getTableName(),
-                            new ArrayList<>(uniqueColumns));
+                            new ArrayList<>(uniqueColumns),
+                            "INNER");
                     result.add(inverseJoin);
                 });
             }

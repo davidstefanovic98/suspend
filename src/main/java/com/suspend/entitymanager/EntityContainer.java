@@ -44,6 +44,20 @@ public class EntityContainer {
         }
     }
 
+    public <T> EntityReference resolve(T entity) {
+        Optional<EntityReference> entityReferenceOptional = entityReferences.stream()
+                .filter(entityReference -> entityReference.getEntityClass().equals(entity.getClass()))
+                .findFirst();
+
+        if (entityReferenceOptional.isPresent()) {
+            return entityReferenceOptional.get();
+        } else {
+            EntityReference entityReference = new EntityReference(entity.getClass());
+            entityReference.setTableMetadata(new TableMapper().getMetadata(entity));
+            entityReferences.add(entityReference);
+            return entityReference;
+        }
+    }
 
     public EntityReference initialize(EntityReference entityReference) {
         if (entityReference.isFullyInitialized()) {

@@ -102,22 +102,27 @@ public class TableMapper {
                                 .filter(f -> f.isAnnotationPresent(ManyToOne.class))
                                 .filter(f -> f.getName().equals(oneToMany.mappedBy()))
                                 .findFirst();
-
+                        matchingManyToOneColumn.filter(f -> !f.isAnnotationPresent(JoinColumn.class))
+                                .ifPresent(f -> {
+                                    throw new AnnotationMissingException(String.format("The @JoinColumn annotation is missing from the field '%s' in the class '%s'.", f.getName(), type.getName()));
+                                });
 
                         if (matchingManyToOneColumn.isPresent()) {
                             JoinColumn column = matchingManyToOneColumn.get().getAnnotation(JoinColumn.class);
-                            if (field.isAnnotationPresent(JoinColumn.class)) {
+//                            if (field.isAnnotationPresent(JoinColumn.class)) {
                                 //TODO: Implement bidirectional relationship
-                                JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
-                                if (joinColumn.name().isEmpty())
-                                    return new ColumnMetadata(ReflectionUtil.getGenericTypeFromField(field), field.getName(), value, columnName, annotations);
-                                return new ColumnMetadata(ReflectionUtil.getGenericTypeFromField(field), field.getName(), value, joinColumn.name(), annotations);
-                            } else {
+//                                JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
+//                                if (joinColumn == null) {
+//
+//                                }
+//                                if (joinColumn.name().isEmpty())
+//                                    return new ColumnMetadata(ReflectionUtil.getGenericTypeFromField(field), field.getName(), value, columnName, annotations);
+//                                return new ColumnMetadata(ReflectionUtil.getGenericTypeFromField(field), field.getName(), value, joinColumn.name(), annotations);
+//                            } else {
                                 if (oneToMany.mappedBy().isEmpty())
-                                    return new ColumnMetadata(ReflectionUtil.getGenericTypeFromField(field), field.getName(), value, column.referencedColumnName(), annotations);
+                                    throw new AnnotationMissingException(String.format("The @OneToMany mappedBy attribute not set for field %s in %s", field.getName(), clazz.getName()));
                                 return new ColumnMetadata(ReflectionUtil.getGenericTypeFromField(field), field.getName(), value, column.referencedColumnName(), annotations);
-                            }
-                        } else {
+                            } else {
                              throw new AnnotationMissingException(String.format("The @OneToMany mappedBy attribute not properly set for field %s in %s", field.getName(), clazz.getName()));
                         }
                     } catch (IllegalAccessException e) {

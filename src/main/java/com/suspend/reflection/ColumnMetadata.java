@@ -1,5 +1,8 @@
 package com.suspend.reflection;
 
+import com.suspend.annotation.ManyToOne;
+import com.suspend.annotation.OneToMany;
+
 import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Objects;
@@ -63,5 +66,13 @@ public final class ColumnMetadata {
                 "name=" + name + ", " +
                 "value=" + value + ", " +
                 "columnName=" + columnName + ']';
+    }
+
+    public boolean isOneToMany() {
+        return annotations.stream().anyMatch(annotation -> annotation instanceof OneToMany);
+    }
+
+    public boolean isManyToOne() {
+        return annotations.stream().anyMatch(annotation -> annotation instanceof ManyToOne);
     }
 }

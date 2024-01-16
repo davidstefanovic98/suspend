@@ -12,10 +12,9 @@ import com.suspend.util.ReflectionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.Field;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Mapper<T> {
 
@@ -23,7 +22,7 @@ public class Mapper<T> {
     private final Class<T> clazz;
     private final Logger logger = LoggerFactory.getLogger(Mapper.class);
     private final Configuration configuration;
-    private final Set<Object> mappedInstances = new HashSet<>();
+    private final Map<Class<?>, Set<Object>> mappedInstancesMap = new HashMap<>();
 
     public Mapper(Class<T> clazz, List<Map<String, Object>> data) {
         this.data = data;
@@ -34,13 +33,18 @@ public class Mapper<T> {
     public List<T> map() {
         EntityContainer entityContainer = configuration.getEntityContainer();
         EntityReference entityReference = entityContainer.resolve(clazz);
-        return data.stream()
-                .map(row -> {
-                    T instance = (T) ReflectionUtil.newInstance(entityReference.getEntityClass());
-                    mapColumns(row, instance, entityReference);
-                    return instance;
-                })
-                .toList();
+
+        Map<Object, T> mainEntityMap = new HashMap<>();
+
+        for (Map<String, Object> row : data) {
+            Object mainEntityId = extractMainEntityId(row, entityReference);
+            if (!mainEntityMap.containsKey(mainEntityId)) {
+                T instance = ReflectionUtil.newInstance(clazz);
+                mapColumns(row, instance, entityReference);
+                mainEntityMap.put(mainEntityId, instance);
+            }
+        }
+        return mainEntityMap.values().stream().toList();
     }
 
     private void mapColumns(Map<String, Object> row, T instance, EntityReference entityReference) {
@@ -67,6 +71,7 @@ public class Mapper<T> {
 
     private void mapManyToOneReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference) {
         entityReference.getManyToOneReferences().forEach(reference -> {
+            Set<Object> mappedInstances = mappedInstancesMap.computeIfAbsent(instance.getClass(), k -> new HashSet<>());
             if (mappedInstances.contains(instance)) {
                 return;
             }
@@ -77,27 +82,53 @@ public class Mapper<T> {
 
     private void mapOneToManyReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference) {
         entityReference.getOneToManyReferences().forEach(reference -> {
+            Set<Object> mappedInstances = mappedInstancesMap.computeIfAbsent(instance.getClass(), k -> new HashSet<>());
             if (mappedInstances.contains(instance)) {
                 return;
             }
-            List<Object> referencedInstances = mapEntityInstances(row, column, reference);
+            List<Object> referencedInstances = mapEntityInstances(column, reference);
             ReflectionUtil.setField(instance, clazz, column.getName(), referencedInstances);
         });
     }
 
     private Object mapEntityInstance(Map<String, Object> row, ColumnMetadata column, EntityReference entityReference) {
+        String startsWith = entityReference.getTableMetadata().getTableName() + ".";
+        Set<String> subRow = row.keySet()
+                .stream()
+                .filter(entry -> entry.startsWith(startsWith))
+                .collect(Collectors.toSet());
+        List<Object> subRowValues = subRow.stream().map(row::get).toList();
+        if (subRowValues.stream().allMatch(Objects::isNull)) {
+            return null;
+        }
+
+        Set<Object> mappedInstances = mappedInstancesMap.computeIfAbsent(entityReference.getEntityClass(), k -> new HashSet<>());
+
         T referencedInstance = (T) ReflectionUtil.newInstance(entityReference.getEntityClass());
+
         mappedInstances.add(referencedInstance);
+
+        // Map the columns and references
         mapColumns(row, referencedInstance, entityReference);
         mapManyToOneReferences(row, referencedInstance, column, entityReference);
         mapOneToManyReferences(row, referencedInstance, column, entityReference);
+
         return referencedInstance;
     }
 
-    private List<Object> mapEntityInstances(Map<String, Object> row, ColumnMetadata column, EntityReference entityReference) {
+    private List<Object> mapEntityInstances(ColumnMetadata column, EntityReference entityReference) {
         return data
                 .stream()
                 .map(subRow -> mapEntityInstance(subRow, column, entityReference))
                 .toList();
+    }
+
+    private Object extractMainEntityId(Map<String, Object> row, EntityReference entityReference) {
+        // Assuming the main entity has a single ID column for simplicity
+        ColumnMetadata idColumn = entityReference.getTableMetadata().getIdColumns().get(0);
+        String columnName = QueryBuilderUtil.getScopedNameFromMapping(entityReference.getTableMetadata().getTableName(), idColumn.getColumnName());
+
+        // Extract the ID value from the row
+        return row.get(columnName);
     }
 }

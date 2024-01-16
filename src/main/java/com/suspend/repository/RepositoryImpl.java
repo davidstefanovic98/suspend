@@ -7,6 +7,7 @@ import com.suspend.entitymanager.EntityContainer;
 import com.suspend.executor.Executor;
 import com.suspend.querybuilder.DefaultQueryBuilder;
 import com.suspend.mapper.Mapper;
+import com.suspend.querybuilder.QueryBuilder;
 import com.suspend.reflection.TableMapper;
 import com.suspend.exception.NotUniqueResultException;
 import com.suspend.util.ReflectionUtil;
@@ -31,13 +32,13 @@ class RepositoryImpl<T, ID> implements Repository<T, ID> {
 
     @Override
     public List<T> findAll() {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(entityContainer.resolve(clazz).getTableMetadata());
+        QueryBuilder queryBuilder = new DefaultQueryBuilder(entityContainer.resolve(clazz).getTableMetadata(), entityContainer);
         return executeQueryAndMap(clazz, queryBuilder.select().join().build());
     }
 
     @Override
     public T save(T model) {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(entityContainer.resolve(clazz).getTableMetadata());
+        QueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(model), entityContainer);
         Object id = executor.executeUpdate(queryBuilder.insert().build());
         Arrays.stream(model.getClass().getDeclaredFields())
                 .filter(field -> field.isAnnotationPresent(Id.class))
@@ -50,7 +51,7 @@ class RepositoryImpl<T, ID> implements Repository<T, ID> {
 
     @Override
     public T update(T model) {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(model));
+        QueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(model), entityContainer);
         executor.executeUpdate(queryBuilder.update().build());
 
         return model;
@@ -58,7 +59,7 @@ class RepositoryImpl<T, ID> implements Repository<T, ID> {
 
     @Override
     public Optional<T> findById(ID id) {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(clazz));
+        QueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(clazz), entityContainer);
         List<T> result = executeQueryAndMap(clazz, queryBuilder.byId(id).build());
         if (result.size() > 1) {
             throw new NotUniqueResultException("The query returned more than one result.");
@@ -71,7 +72,7 @@ class RepositoryImpl<T, ID> implements Repository<T, ID> {
 
     @Override
     public void deleteById(ID id) {
-        DefaultQueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(clazz));
+        QueryBuilder queryBuilder = new DefaultQueryBuilder(new TableMapper().getMetadata(clazz), entityContainer);
         executor.executeUpdate(queryBuilder.deleteById(id).build());
     }
 

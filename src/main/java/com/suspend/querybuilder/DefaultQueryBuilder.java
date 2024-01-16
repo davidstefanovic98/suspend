@@ -1,5 +1,10 @@
 package com.suspend.querybuilder;
 
+import com.suspend.annotation.JoinColumn;
+import com.suspend.annotation.ManyToOne;
+import com.suspend.entitymanager.EntityContainer;
+import com.suspend.entitymanager.EntityReference;
+import com.suspend.exception.AnnotationMissingException;
 import com.suspend.exception.IncorrectTypeException;
 import com.suspend.reflection.ColumnMetadata;
 import com.suspend.reflection.TableMetadata;
@@ -7,6 +12,7 @@ import com.suspend.util.QueryBuilderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,9 +23,11 @@ public class DefaultQueryBuilder implements QueryBuilder {
     private final StringBuilder builder = new StringBuilder();
     private final TableMetadata modelMetadata;
     private List<Join<?, ?>> joins = new ArrayList<>();
+    private EntityContainer entityContainer;
 
-    public DefaultQueryBuilder(TableMetadata modelMetadata) {
-        this.modelMetadata = modelMetadata;
+    public DefaultQueryBuilder(TableMetadata tableMetadata, EntityContainer entityContainer) {
+        this.entityContainer = entityContainer;
+        this.modelMetadata = tableMetadata;
     }
 
     @Override
@@ -46,7 +54,7 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append(String.join(", ", uniqueColumns));
 
         if (!joins.isEmpty()) {
-         return this;
+            return this;
         } else {
             builder.append(" FROM ");
             builder.append(modelMetadata.getTableName());
@@ -63,19 +71,19 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append(String.join(
                 ", ",
                 modelMetadata
-                        .getColumns()
+                        .getAllColumns()
                         .stream()
                         .filter(column -> !modelMetadata.getIdColumns().contains(column))
-                        .map(ColumnMetadata::getName)
+                        .map(ColumnMetadata::getColumnName)
                         .toList()));
         builder.append(") ");
         builder.append(" VALUES (");
 
         String values = modelMetadata
-                .getColumns()
+                .getAllColumns()
                 .stream()
                 .filter(column -> !modelMetadata.getIdColumns().contains(column))
-                .map(column -> getFormattedFieldValue(column, column.getValue()))
+                .map(column -> getFormattedFieldValue(column, column.getValue(), true))
                 .collect(Collectors.joining(", "));
 
         builder.append(String.join(
@@ -97,15 +105,15 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append(String.join(
                 ", ",
                 modelMetadata
-                        .getColumns()
+                        .getAllColumns()
                         .stream()
-                        .map(column -> column.getColumnName() + " = " + getFormattedFieldValue(column, column.getValue()))
+                        .map(column -> column.getColumnName() + " = " + getFormattedFieldValue(column, column.getValue(), true))
                         .toList()));
 
         builder.append(" WHERE ");
         builder.append(id.getColumnName());
         builder.append(" = ");
-        builder.append(getFormattedFieldValue(id, id.getValue()));
+        builder.append(getFormattedFieldValue(id, id.getValue(), true));
         return this;
     }
 
@@ -117,11 +125,11 @@ public class DefaultQueryBuilder implements QueryBuilder {
             throw new IncorrectTypeException("The type of the id does not match the type of the column.");
         }
 
-        this.select();
+        this.select().join();
         builder.append(" WHERE ");
-        builder.append(columnMetadata.getColumnName());
+        builder.append(QueryBuilderUtil.getScopedNameFromMapping(modelMetadata.getTableName(), columnMetadata.getColumnName()));
         builder.append(" = ");
-        builder.append(getFormattedFieldValue(columnMetadata, id));
+        builder.append(getFormattedFieldValue(columnMetadata, id, false));
         return this;
     }
 
@@ -132,7 +140,7 @@ public class DefaultQueryBuilder implements QueryBuilder {
         builder.append(" WHERE ");
         builder.append(modelMetadata.getIdColumns().get(0).getColumnName());
         builder.append(" = ");
-        builder.append(getFormattedFieldValue(modelMetadata.getIdColumns().get(0), id));
+        builder.append(getFormattedFieldValue(modelMetadata.getIdColumns().get(0), id, false));
         return this;
     }
 
@@ -167,7 +175,33 @@ public class DefaultQueryBuilder implements QueryBuilder {
     }
 
     // Jesus Christ...
-    private String getFormattedFieldValue(ColumnMetadata field, Object value) {
+    private String getFormattedFieldValue(ColumnMetadata field, Object value, boolean isSave) {
+        if (isSave) {
+            if (field.isOneToMany()) {
+                return "";
+            }
+
+            if (field.isManyToOne()) {
+                JoinColumn joinColumn = field.getAnnotations().stream()
+                        .filter(annotation -> annotation instanceof JoinColumn)
+                        .map(annotation -> (JoinColumn) annotation)
+                        .findFirst()
+                        .orElseThrow(() -> new AnnotationMissingException(
+                                String.format(
+                                        "The @JoinColumn annotation is missing from the field '%s' in the class '%s'.",
+                                        field.getName(),
+                                        modelMetadata.getClazz().getName())));
+                if (value == null) {
+                    return "NULL";
+                }
+                Object id = getFieldValue(joinColumn.referencedColumnName(), value);
+                if (String.class.isAssignableFrom(id.getClass()))
+                    return String.format("'%s'", id);
+                else
+                    return id.toString();
+            }
+        }
+
         if (value == null) {
             return "NULL";
         } else if (String.class.isAssignableFrom(field.getType())) {
@@ -192,6 +226,16 @@ public class DefaultQueryBuilder implements QueryBuilder {
             return value.toString();
         } else {
             return value.toString();
+        }
+    }
+
+    private Object getFieldValue(String name, Object value) {
+        try {
+            Field field = value.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return field.get(value);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new RuntimeException(e);
         }
     }
 }

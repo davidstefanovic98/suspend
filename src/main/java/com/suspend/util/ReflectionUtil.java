@@ -1,6 +1,7 @@
 package com.suspend.util;
 
 import com.suspend.annotation.Column;
+import com.suspend.annotation.Id;
 import com.suspend.annotation.Table;
 import com.suspend.exception.IncorrectTypeException;
 import org.reflections.Reflections;
@@ -10,6 +11,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 
@@ -113,5 +115,20 @@ public class ReflectionUtil {
             return (Class<?>) type;
         }
         return (Class<?>) genericType;
+    }
+
+    public static Object getId(Object instance) {
+        return Arrays.stream(instance.getClass().getDeclaredFields())
+                .filter(field -> field.isAnnotationPresent(Id.class))
+                .map(field -> {
+                    field.setAccessible(true);
+                    try {
+                        return field.get(instance);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No id field found."));
     }
 }
