@@ -1,13 +1,10 @@
 # Suspend
-___
 
 ## Description
-___
 A light ORM framework for Java inspired by Spring Data JPA and Hibernate.
 This project showcase the use of Java Reflection API and Annotation Processing API.
 
 ## Features
-___
 - [x] Annotation based entity mapping
 - [x] Repository interface for CRUD operations (inspired by Spring Data JPA)
 - [ ] Annotation based query generation
@@ -15,7 +12,6 @@ ___
 - [ ] Interface for interacting with persistence context (EntityManager)
 
 ## Usage
-___
 ### Table Mapping
 ```java
 @Table(name = "test_model")
