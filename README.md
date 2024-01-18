@@ -55,6 +55,7 @@ TestModelRepository is an interface that extends Repository interface. The first
 For now, it only provides the basic CRUD operations. Annotation based query and namespace resolution for query generation will be added in the future.
 
 ### Configuration
+#### Creating configuration
 ```java
 @Grain
 public class Config {
@@ -74,6 +75,19 @@ Configuration class is used to configure the way Suspend works. Repository packa
 Only entities with @Table annotation will be scanned and only repositories that extend Repository interface are scanned.
 Method addAnnotatedClass is used to scan the whole project for entities. This method used to separate entities from non-entities classes that are in entity package.
 The configuration as it is now is not ideal, since is solely based on working with dependency injection frameworks ([Spring](https://github.com/spring-projects/spring-framework) or in this case [Grain](https://github.com/7aske/grain)). In the future, the configuration will be changed to be more flexible.
+
+### Reading properties from application.properties
+```properties
+suspend.db.protocol=jdbc:mariadb
+suspend.db.driver=org.mariadb.jdbc.Driver
+suspend.db.host=localhost
+suspend.db.port=3306
+suspend.db.name=suspend
+suspend.db.user=root
+suspend.db.password=****
+```
+These properties need to be added in order for Suspend to connect to the database. The properties can be changed to suit your needs.
+Properties file must be named application.properties for now, but that will probably be changed.
 
 #### More features will be added in the future. Stay tuned!
 
