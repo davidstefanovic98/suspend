@@ -76,3 +76,10 @@ Method addAnnotatedClass is used to scan the whole project for entities. This me
 The configuration as it is now is not ideal, since is solely based on working with dependency injection frameworks ([Spring](https://github.com/spring-projects/spring-framework) or in this case [Grain](https://github.com/7aske/grain)). In the future, the configuration will be changed to be more flexible.
 
 #### More features will be added in the future. Stay tuned!
+
+## Contact
+David Stefanović - [david.stefanovic0711@gmail.com](mailto:)
+
+Distributed under the GPL v2 license. See [```LICENSE```](https://github.com/davidstefanovic98/suspend/blob/master/LICENSE) for more information.
+
+[github.com/davidstefanovic98](https://github.com/davidstefanovic98)
