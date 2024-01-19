@@ -1,5 +1,6 @@
 package com.suspend.mapper;
 
+import com.suspend.annotation.ManyToMany;
 import com.suspend.annotation.ManyToOne;
 import com.suspend.annotation.OneToMany;
 import com.suspend.configuration.Configuration;
@@ -12,7 +13,6 @@ import com.suspend.util.ReflectionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,7 +22,7 @@ public class Mapper<T> {
     private final Class<T> clazz;
     private final Logger logger = LoggerFactory.getLogger(Mapper.class);
     private final Configuration configuration;
-    private final Map<Class<?>, Set<Object>> mappedInstancesMap = new HashMap<>();
+    private final Map<String, Set<Object>> mappedInstancesMap = new HashMap<>();
 
     public Mapper(Class<T> clazz, List<Map<String, Object>> data) {
         this.data = data;
@@ -35,29 +35,34 @@ public class Mapper<T> {
         EntityReference entityReference = entityContainer.resolve(clazz);
 
         Map<Object, T> mainEntityMap = new HashMap<>();
+        Set<String> recursionStack = new HashSet<>();
+        String relationshipKey = "";
 
         for (Map<String, Object> row : data) {
             Object mainEntityId = extractMainEntityId(row, entityReference);
             if (!mainEntityMap.containsKey(mainEntityId)) {
                 T instance = ReflectionUtil.newInstance(clazz);
-                mapColumns(row, instance, entityReference);
+                mapColumns(row, instance, entityReference, recursionStack, relationshipKey);
                 mainEntityMap.put(mainEntityId, instance);
             }
         }
         return mainEntityMap.values().stream().toList();
     }
 
-    private void mapColumns(Map<String, Object> row, T instance, EntityReference entityReference) {
+    private void mapColumns(Map<String, Object> row, T instance, EntityReference entityReference, Set<String> recursionStack, String relationshipKey) {
         entityReference.getTableMetadata().getAllColumns()
                 .forEach(column -> {
                     String columnName = QueryBuilderUtil.getScopedNameFromMapping(entityReference.getTableMetadata().getTableName(), column.getColumnName());
                     boolean isManyToOne = column.getAnnotations().stream().anyMatch(annotation -> annotation instanceof ManyToOne);
                     boolean isOneToMany = column.getAnnotations().stream().anyMatch(annotation -> annotation instanceof OneToMany);
+                    boolean isManyToMany = column.getAnnotations().stream().anyMatch(annotation -> annotation instanceof ManyToMany);
 
                     if (isManyToOne) {
-                        mapManyToOneReferences(row, instance, column, entityReference);
+                        mapManyToOneReferences(row, instance, column, entityReference, recursionStack);
                     } else if (isOneToMany) {
-                        mapOneToManyReferences(row, instance, column, entityReference);
+                        mapOneToManyReferences(row, instance, column, entityReference, recursionStack);
+                    } else if (isManyToMany) {
+                        mapManyToManyReferences(row, instance, column, entityReference, recursionStack);
                     } else {
                         if (!row.containsKey(columnName)) {
                             throw new InvalidMappingException(String.format("Column %s is not present in the result set", column.getColumnName()));
@@ -69,29 +74,62 @@ public class Mapper<T> {
                 });
     }
 
-    private void mapManyToOneReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference) {
+    private void mapManyToOneReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference, Set<String> recursionStack) {
         entityReference.getManyToOneReferences().forEach(reference -> {
-            Set<Object> mappedInstances = mappedInstancesMap.computeIfAbsent(instance.getClass(), k -> new HashSet<>());
-            if (mappedInstances.contains(instance)) {
+            String relationshipKey = instance.getClass().getName() + "_" + reference.getEntityClass().getName();
+
+            boolean found = recursionStack.stream().anyMatch(key -> {
+                String[] splittedKey = QueryBuilderUtil.splitRelationshipKey(key, "_");
+                return reference.getEntityClass().getName().equals(splittedKey[0]) && instance.getClass().getName().equals(splittedKey[1]);
+            });
+
+            if (!recursionStack.add(relationshipKey) || found) {
                 return;
             }
-            Object referencedInstance = mapEntityInstance(row, column, reference);
-            ReflectionUtil.setField(instance, clazz, column.getName(), referencedInstance);
+
+            Object referencedInstance = mapEntityInstance(row, column, reference, recursionStack, relationshipKey);
+            ReflectionUtil.setField(instance, instance.getClass(), column.getName(), referencedInstance);
         });
     }
 
-    private void mapOneToManyReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference) {
+    private void mapOneToManyReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference, Set<String> recursionStack) {
         entityReference.getOneToManyReferences().forEach(reference -> {
-            Set<Object> mappedInstances = mappedInstancesMap.computeIfAbsent(instance.getClass(), k -> new HashSet<>());
-            if (mappedInstances.contains(instance)) {
+            String relationshipKey = instance.getClass().getName() + "_" + reference.getEntityClass().getName();
+
+            boolean found = recursionStack.stream().anyMatch(key -> {
+                String[] splittedKey = QueryBuilderUtil.splitRelationshipKey(key, "_");
+                return reference.getEntityClass().getName().equals(splittedKey[0]) && instance.getClass().getName().equals(splittedKey[1]);
+            });
+
+            if (!recursionStack.add(relationshipKey) || found) {
                 return;
             }
-            List<Object> referencedInstances = mapEntityInstances(column, reference);
-            ReflectionUtil.setField(instance, clazz, column.getName(), referencedInstances);
+
+            List<Object> referencedInstances = mapEntityInstances(column, reference, recursionStack, relationshipKey);
+            ReflectionUtil.setField(instance, instance.getClass(), column.getName(), referencedInstances);
         });
     }
 
-    private Object mapEntityInstance(Map<String, Object> row, ColumnMetadata column, EntityReference entityReference) {
+    private void mapManyToManyReferences(Map<String, Object> row, T instance, ColumnMetadata column, EntityReference entityReference, Set<String> recursionStack) {
+        entityReference.getManyToManyReferences().forEach(reference -> {
+            String relationshipKey = instance.getClass().getName() + "_" + reference.getEntityClass().getName();
+
+            boolean found = recursionStack.stream().anyMatch(key -> {
+                String[] splittedKey = QueryBuilderUtil.splitRelationshipKey(key, "_");
+                return reference.getEntityClass().getName().equals(splittedKey[0]) && instance.getClass().getName().equals(splittedKey[1]);
+            });
+
+            if (!recursionStack.add(relationshipKey) || found) {
+                return;
+            }
+
+            List<Object> referencedInstances = mapEntityInstances(column, reference, recursionStack, relationshipKey);
+            List<Object> notNull = referencedInstances.stream().filter(Objects::nonNull).collect(Collectors.toList());
+            ReflectionUtil.setField(instance, instance.getClass(), column.getName(), notNull);
+        });
+    }
+
+    private Object mapEntityInstance(Map<String, Object> row, ColumnMetadata column, EntityReference entityReference, Set<String> recursionStack, String relationshipKey) {
         String startsWith = entityReference.getTableMetadata().getTableName() + ".";
         Set<String> subRow = row.keySet()
                 .stream()
@@ -102,24 +140,20 @@ public class Mapper<T> {
             return null;
         }
 
-        Set<Object> mappedInstances = mappedInstancesMap.computeIfAbsent(entityReference.getEntityClass(), k -> new HashSet<>());
-
         T referencedInstance = (T) ReflectionUtil.newInstance(entityReference.getEntityClass());
 
-        mappedInstances.add(referencedInstance);
-
-        // Map the columns and references
-        mapColumns(row, referencedInstance, entityReference);
-        mapManyToOneReferences(row, referencedInstance, column, entityReference);
-        mapOneToManyReferences(row, referencedInstance, column, entityReference);
+        mapColumns(row, referencedInstance, entityReference, recursionStack, relationshipKey);
+        mapManyToOneReferences(row, referencedInstance, column, entityReference, recursionStack);
+        mapOneToManyReferences(row, referencedInstance, column, entityReference, recursionStack);
+        mapManyToManyReferences(row, referencedInstance, column, entityReference, recursionStack);
 
         return referencedInstance;
     }
 
-    private List<Object> mapEntityInstances(ColumnMetadata column, EntityReference entityReference) {
+    private List<Object> mapEntityInstances(ColumnMetadata column, EntityReference entityReference, Set<String> recursionStack, String relationshipKey) {
         return data
                 .stream()
-                .map(subRow -> mapEntityInstance(subRow, column, entityReference))
+                .map(subRow -> mapEntityInstance(subRow, column, entityReference, recursionStack, relationshipKey))
                 .toList();
     }
 

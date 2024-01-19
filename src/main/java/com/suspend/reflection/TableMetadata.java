@@ -11,6 +11,7 @@ public class TableMetadata {
     private List<ColumnMetadata> idColumns;
     private List<ColumnMetadata> oneToManyColumns;
     private List<ColumnMetadata> manyToOneColumns;
+    private List<ColumnMetadata> manyToManyColumns;
     private Class<?> clazz;
 
     public TableMetadata() {}
@@ -22,6 +23,7 @@ public class TableMetadata {
             List<ColumnMetadata> idColumns,
             List<ColumnMetadata> oneToManyColumns,
             List<ColumnMetadata> manyToOneColumns,
+            List<ColumnMetadata> manyToManyColumns,
             Class<?> clazz) {
         this.tableName = tableName;
         this.className = className;
@@ -29,6 +31,7 @@ public class TableMetadata {
         this.idColumns = idColumns;
         this.oneToManyColumns = oneToManyColumns;
         this.manyToOneColumns = manyToOneColumns;
+        this.manyToManyColumns = manyToManyColumns;
         this.clazz = clazz;
     }
 
@@ -60,8 +63,12 @@ public class TableMetadata {
         return manyToOneColumns;
     }
 
+    public List<ColumnMetadata> getManyToManyColumns() {
+        return manyToManyColumns;
+    }
+
     public List<ColumnMetadata> getAllColumns() {
-        return Stream.of(idColumns, columns, oneToManyColumns, manyToOneColumns)
+        return Stream.of(idColumns, columns, oneToManyColumns, manyToOneColumns, manyToManyColumns)
                 .flatMap(List::stream)
                 .toList();
     }

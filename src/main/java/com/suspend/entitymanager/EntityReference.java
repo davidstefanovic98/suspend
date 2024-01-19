@@ -9,6 +9,7 @@ public class EntityReference {
     private Class<?> entityClass;
     private List<EntityReference> manyToOneReferences = new ArrayList<>();
     private List<EntityReference> oneToManyReferences = new ArrayList<>();
+    private List<EntityReference> manyToManyReferences = new ArrayList<>();
     private boolean isInitializing;
     private boolean isFullyInitialized;
     private TableMetadata tableMetadata;
@@ -37,6 +38,10 @@ public class EntityReference {
 
     public List<EntityReference> getOneToManyReferences() {
         return oneToManyReferences;
+    }
+
+    public List<EntityReference> getManyToManyReferences() {
+        return manyToManyReferences;
     }
 
     public void setEntityClass(Class<?> entityClass) {

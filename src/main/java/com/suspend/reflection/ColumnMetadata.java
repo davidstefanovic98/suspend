@@ -14,6 +14,7 @@ public final class ColumnMetadata {
     private final String name;
     private final Object value;
     private final String columnName;
+    private final String referencedName;
     private List<? extends Annotation> annotations;
 
     public ColumnMetadata(Class<?> type, String name, Object value, String columnName, List<? extends Annotation> annotations) {
@@ -21,8 +22,19 @@ public final class ColumnMetadata {
         this.name = name;
         this.value = value;
         this.columnName = columnName;
+        this.referencedName = "";
         this.annotations = annotations;
     }
+
+    public ColumnMetadata(Class<?> type, String name, Object value, String columnName, String referencedName, List<? extends Annotation> annotations) {
+        this.type = type;
+        this.name = name;
+        this.value = value;
+        this.columnName = columnName;
+        this.referencedName = referencedName;
+        this.annotations = annotations;
+    }
+
 
     public Class<?> getType() {
         return type;
@@ -38,6 +50,10 @@ public final class ColumnMetadata {
 
     public String getColumnName() {
         return columnName;
+    }
+
+    public String getReferencedName() {
+        return referencedName;
     }
 
     public List<? extends Annotation> getAnnotations() {

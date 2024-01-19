@@ -76,6 +76,24 @@ public class Configuration {
                                 .getOneToManyReferences()
                                 .add(entityContainer.initialize(reference));
                     }
+
+                    if (field.isAnnotationPresent(ManyToMany.class)) {
+                        Class<?> clazz;
+                        if (Collection.class.isAssignableFrom(field.getType())) {
+                            clazz = ReflectionUtil.getGenericTypeFromField(field);
+                        } else if (field.getType().isArray()) {
+                            clazz = field.getType().getComponentType();
+                        } else {
+                            clazz = field.getType();
+                        }
+
+                        EntityReference reference = entityContainer.resolve(clazz);
+                        reference.setOwner(field.isAnnotationPresent(JoinTable.class));
+                        reference.setParent(entityReference);
+                        entityReference
+                                .getManyToManyReferences()
+                                .add(entityContainer.initialize(reference));
+                    }
             }
             if (entityClass.isAnnotationPresent(annotationClass)) {
                 Class<?> repositoryClass = classes.stream()

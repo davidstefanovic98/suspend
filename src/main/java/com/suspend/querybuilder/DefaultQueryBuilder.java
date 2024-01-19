@@ -43,7 +43,7 @@ public class DefaultQueryBuilder implements QueryBuilder {
         Set<String> uniqueColumns;
         if (!joins.isEmpty()) {
             uniqueColumns = Stream.concat(modelMetadata.getIdColumns().stream(), modelMetadata.getColumns().stream())
-                    .map(column -> String.format("%s.%s", modelMetadata.getTableName(), column.getColumnName()))
+                    .map(column -> String.format("%s.%s", QueryBuilderUtil.getAlias(modelMetadata.getTableName()), column.getColumnName()))
                     .collect(Collectors.toCollection(LinkedHashSet::new));
         } else {
             uniqueColumns = Stream.concat(modelMetadata.getIdColumns().stream(), modelMetadata.getColumns().stream())
@@ -159,12 +159,15 @@ public class DefaultQueryBuilder implements QueryBuilder {
         if (!joins.isEmpty()) {
             builder.append(",");
             builder.append(" ");
-            builder.append(joins
+            Set<String> fields = joins
                     .stream()
                     .flatMap(j -> j.getFields().stream())
-                    .collect(Collectors.joining(", ")));
-            builder.append(" from ");
+                    .collect(Collectors.toSet());
+            builder.append(String.join(", ", fields));
+            builder.append(" FROM ");
             builder.append(modelMetadata.getTableName());
+            builder.append(" AS ");
+            builder.append(QueryBuilderUtil.getAlias(modelMetadata.getTableName()));
             builder.append(" ");
             builder.append(joins
                     .stream()
